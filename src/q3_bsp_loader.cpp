@@ -82,10 +82,10 @@ namespace
 		const auto num_verts = static_cast<std::size_t>(p_surface.numVerts);
 		const auto first_index = static_cast<std::size_t>(p_surface.firstIndex);
 		const auto num_indexes = static_cast<std::size_t>(p_surface.numIndexes);
-		return first_vert <= p_bsp.draw_vertices.size() &&
-				num_verts <= p_bsp.draw_vertices.size() - first_vert &&
-				first_index <= p_bsp.draw_indexes.size() &&
-				num_indexes <= p_bsp.draw_indexes.size() - first_index;
+		return first_vert <= p_bsp.drawVerts.size() &&
+				num_verts <= p_bsp.drawVerts.size() - first_vert &&
+				first_index <= p_bsp.drawIndexes.size() &&
+				num_indexes <= p_bsp.drawIndexes.size() - first_index;
 	}
 
 	bool ShaderIsNoDraw(const q3::bsp::BspData &p_bsp, int p_shader_num)
@@ -195,11 +195,11 @@ namespace
 
 		const int base = r_worldData.vertices.size();
 		for (int i = 0; i < ds.numVerts; ++i) {
-			EmitDrawVert(r_worldData, p_bsp.draw_vertices[static_cast<std::size_t>(ds.firstVert + i)]);
+			EmitDrawVert(r_worldData, p_bsp.drawVerts[static_cast<std::size_t>(ds.firstVert + i)]);
 		}
 
 		for (int i = 0; i < ds.numIndexes; ++i) {
-			const std::int32_t index = p_bsp.draw_indexes[static_cast<std::size_t>(ds.firstIndex + i)];
+			const std::int32_t index = p_bsp.drawIndexes[static_cast<std::size_t>(ds.firstIndex + i)];
 			if (index < 0 || index >= ds.numVerts) {
 				UtilityFunctions::push_warning("Skipping malformed BSP face index.");
 				continue;
@@ -226,7 +226,7 @@ namespace
 			return;
 		}
 
-		const q3::bsp::drawVert_t *verts = p_bsp.draw_vertices.data() + ds.firstVert;
+		const q3::bsp::drawVert_t *verts = p_bsp.drawVerts.data() + ds.firstVert;
 		const srfGridMesh_t grid = R_SubdividePatchToGrid(ds.patchWidth, ds.patchHeight, verts);
 		EmitGridMesh(grid, r_worldData);
 	}

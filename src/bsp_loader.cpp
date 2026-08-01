@@ -9,9 +9,9 @@ namespace q3::bsp
 	namespace
 	{
 		template <typename T>
-		bool copy_lump(const std::vector<std::uint8_t> &p_file, const dheader_t &p_header, LumpType p_type, std::vector<T> &r_out, std::string &r_error)
+		bool copy_lump(const std::vector<std::uint8_t> &p_file, const dheader_t &p_header, lumpIndex_t lumpNum, std::vector<T> &r_out, std::string &r_error)
 		{
-			const lump_t &lump = p_header.lumps[static_cast<std::size_t>(p_type)];
+			const lump_t &lump = p_header.lumps[static_cast<std::size_t>(lumpNum)];
 			if (lump.fileofs < 0 || lump.filelen < 0) {
 				r_error = "BSP lump has a negative offset or length.";
 				return false;
@@ -36,9 +36,9 @@ namespace q3::bsp
 			return true;
 		}
 
-		bool copy_bytes(const std::vector<std::uint8_t> &p_file, const dheader_t &p_header, LumpType p_type, std::vector<std::uint8_t> &r_out, std::string &r_error)
+		bool copy_lump_bytes(const std::vector<std::uint8_t> &p_file, const dheader_t &p_header, lumpIndex_t lumpNum, std::vector<std::uint8_t> &r_out, std::string &r_error)
 		{
-			const lump_t &lump = p_header.lumps[static_cast<std::size_t>(p_type)];
+			const lump_t &lump = p_header.lumps[static_cast<std::size_t>(lumpNum)];
 			if (lump.fileofs < 0 || lump.filelen < 0) {
 				r_error = "BSP lump has a negative offset or length.";
 				return false;
@@ -93,27 +93,27 @@ namespace q3::bsp
 		}
 
 		std::vector<std::uint8_t> entity_bytes;
-		if (!copy_bytes(bytes, r_data.header, LumpType::Entities, entity_bytes, r_error) ||
-				!copy_lump(bytes, r_data.header, LumpType::Shaders, r_data.shaders, r_error) ||
-				!copy_lump(bytes, r_data.header, LumpType::Planes, r_data.planes, r_error) ||
-				!copy_lump(bytes, r_data.header, LumpType::Nodes, r_data.nodes, r_error) ||
-				!copy_lump(bytes, r_data.header, LumpType::Leaves, r_data.leaves, r_error) ||
-				!copy_lump(bytes, r_data.header, LumpType::LeafSurfaces, r_data.leaf_surfaces, r_error) ||
-				!copy_lump(bytes, r_data.header, LumpType::LeafBrushes, r_data.leaf_brushes, r_error) ||
-				!copy_lump(bytes, r_data.header, LumpType::Models, r_data.models, r_error) ||
-				!copy_lump(bytes, r_data.header, LumpType::Brushes, r_data.brushes, r_error) ||
-				!copy_lump(bytes, r_data.header, LumpType::BrushSides, r_data.brush_sides, r_error) ||
-				!copy_lump(bytes, r_data.header, LumpType::DrawVertices, r_data.draw_vertices, r_error) ||
-				!copy_lump(bytes, r_data.header, LumpType::DrawIndexes, r_data.draw_indexes, r_error) ||
-				!copy_lump(bytes, r_data.header, LumpType::Fogs, r_data.fogs, r_error) ||
-				!copy_lump(bytes, r_data.header, LumpType::Surfaces, r_data.surfaces, r_error) ||
-				!copy_bytes(bytes, r_data.header, LumpType::Lightmaps, r_data.lightmaps, r_error) ||
-				!copy_bytes(bytes, r_data.header, LumpType::LightGrid, r_data.light_grid, r_error) ||
-				!copy_bytes(bytes, r_data.header, LumpType::Visibility, r_data.visibility, r_error)) {
+		if (!copy_lump_bytes(bytes, r_data.header, LUMP_ENTITIES, entity_bytes, r_error) ||
+				!copy_lump(bytes, r_data.header, LUMP_SHADERS, r_data.shaders, r_error) ||
+				!copy_lump(bytes, r_data.header, LUMP_PLANES, r_data.planes, r_error) ||
+				!copy_lump(bytes, r_data.header, LUMP_NODES, r_data.nodes, r_error) ||
+				!copy_lump(bytes, r_data.header, LUMP_LEAFS, r_data.leafs, r_error) ||
+				!copy_lump(bytes, r_data.header, LUMP_LEAFSURFACES, r_data.leafsurfaces, r_error) ||
+				!copy_lump(bytes, r_data.header, LUMP_LEAFBRUSHES, r_data.leafbrushes, r_error) ||
+				!copy_lump(bytes, r_data.header, LUMP_MODELS, r_data.models, r_error) ||
+				!copy_lump(bytes, r_data.header, LUMP_BRUSHES, r_data.brushes, r_error) ||
+				!copy_lump(bytes, r_data.header, LUMP_BRUSHSIDES, r_data.brushsides, r_error) ||
+				!copy_lump(bytes, r_data.header, LUMP_DRAWVERTS, r_data.drawVerts, r_error) ||
+				!copy_lump(bytes, r_data.header, LUMP_DRAWINDEXES, r_data.drawIndexes, r_error) ||
+				!copy_lump(bytes, r_data.header, LUMP_FOGS, r_data.fogs, r_error) ||
+				!copy_lump(bytes, r_data.header, LUMP_SURFACES, r_data.surfaces, r_error) ||
+				!copy_lump_bytes(bytes, r_data.header, LUMP_LIGHTMAPS, r_data.lightmaps, r_error) ||
+				!copy_lump_bytes(bytes, r_data.header, LUMP_LIGHTGRID, r_data.lightgrid, r_error) ||
+				!copy_lump_bytes(bytes, r_data.header, LUMP_VISIBILITY, r_data.visibility, r_error)) {
 			return false;
 		}
 
-		r_data.entities.assign(reinterpret_cast<const char *>(entity_bytes.data()), entity_bytes.size());
+		r_data.entityString.assign(reinterpret_cast<const char *>(entity_bytes.data()), entity_bytes.size());
 		return true;
 	}
 }

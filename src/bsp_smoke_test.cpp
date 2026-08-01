@@ -16,10 +16,10 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	std::cout << "entities=" << data.entities.size() << "\n";
+	std::cout << "entityString=" << data.entityString.size() << "\n";
 	std::cout << "shaders=" << data.shaders.size() << "\n";
-	std::cout << "draw_vertices=" << data.draw_vertices.size() << "\n";
-	std::cout << "draw_indexes=" << data.draw_indexes.size() << "\n";
+	std::cout << "drawVerts=" << data.drawVerts.size() << "\n";
+	std::cout << "drawIndexes=" << data.drawIndexes.size() << "\n";
 	std::cout << "surfaces=" << data.surfaces.size() << "\n";
 	std::cout << "models=" << data.models.size() << "\n";
 	return 0;

@@ -20,29 +20,27 @@ namespace q3::bsp
 		('I' <<  0);
 	inline constexpr std::int32_t BSP_VERSION = 46;
 
-	enum class LumpType
+	enum lumpIndex_t
 	{
-		Entities,
-		Shaders,
-		Planes,
-		Nodes,
-		Leaves,
-		LeafSurfaces,
-		LeafBrushes,
-		Models,
-		Brushes,
-		BrushSides,
-		DrawVertices,
-		DrawIndexes,
-		Fogs,
-		Surfaces,
-		Lightmaps,
-		LightGrid,
-		Visibility,
-		Count,
+		LUMP_ENTITIES,
+		LUMP_SHADERS,
+		LUMP_PLANES,
+		LUMP_NODES,
+		LUMP_LEAFS,
+		LUMP_LEAFSURFACES,
+		LUMP_LEAFBRUSHES,
+		LUMP_MODELS,
+		LUMP_BRUSHES,
+		LUMP_BRUSHSIDES,
+		LUMP_DRAWVERTS,
+		LUMP_DRAWINDEXES,
+		LUMP_FOGS,
+		LUMP_SURFACES,
+		LUMP_LIGHTMAPS,
+		LUMP_LIGHTGRID,
+		LUMP_VISIBILITY,
+		HEADER_LUMPS,
 	};
-
-	inline constexpr std::size_t HEADER_LUMPS = static_cast<std::size_t>(LumpType::Count);
 
 	struct lump_t
 	{
@@ -194,22 +192,22 @@ namespace q3::bsp
 	struct BspData
 	{
 		dheader_t header {};
-		std::string entities;
+		std::string entityString;
 		std::vector<dshader_t> shaders;
 		std::vector<dplane_t> planes;
 		std::vector<dnode_t> nodes;
-		std::vector<dleaf_t> leaves;
-		std::vector<std::int32_t> leaf_surfaces;
-		std::vector<std::int32_t> leaf_brushes;
+		std::vector<dleaf_t> leafs;
+		std::vector<std::int32_t> leafsurfaces;
+		std::vector<std::int32_t> leafbrushes;
 		std::vector<dmodel_t> models;
 		std::vector<dbrush_t> brushes;
-		std::vector<dbrushside_t> brush_sides;
-		std::vector<drawVert_t> draw_vertices;
-		std::vector<std::int32_t> draw_indexes;
+		std::vector<dbrushside_t> brushsides;
+		std::vector<drawVert_t> drawVerts;
+		std::vector<std::int32_t> drawIndexes;
 		std::vector<dfog_t> fogs;
 		std::vector<dsurface_t> surfaces;
 		std::vector<std::uint8_t> lightmaps;
-		std::vector<std::uint8_t> light_grid;
+		std::vector<std::uint8_t> lightgrid;
 		std::vector<std::uint8_t> visibility;
 	};
 
