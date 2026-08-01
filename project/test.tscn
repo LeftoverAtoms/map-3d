@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://82iv13wwwngs"]
+
+[ext_resource type="Script" uid="uid://dpvhsdistjacs" path="res://dump_bsp_array_mesh.gd" id="1_37kl0"]
+[ext_resource type="Texture2D" uid="uid://c6u22trnqw1c8" path="res://uv_texture.png" id="2_6uqi0"]
+[ext_resource type="ArrayMesh" uid="uid://cpxvlbajomb4d" path="res://array_meshes/mptourney3_array_mesh.tres" id="3_ppyta"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ykrsh"]
+albedo_texture = ExtResource("2_6uqi0")
+
+[node name="Test" type="Node" unique_id=1834044727]
+script = ExtResource("1_37kl0")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=1286521856]
+transform = Transform3D(0.01, 0, 0, 0, 0.01, 0, 0, 0, 0.01, 0, 0, 0)
+material_override = SubResource("StandardMaterial3D_ykrsh")
+mesh = ExtResource("3_ppyta")
