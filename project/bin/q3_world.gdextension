@@ -1,0 +1,57 @@
+[configuration]
+
+entry_symbol = "q3_world_library_init"
+compatibility_minimum = "4.1"
+reloadable = false
+
+[libraries]
+; Relative paths ensure that our GDExtension can be placed anywhere in the project directory.
+macos.single.debug = "./macos/libq3_world.macos.template_debug.dylib"
+macos.double.debug = "./macos/libq3_world.macos.template_debug.double.dylib"
+macos.single.release = "./macos/libq3_world.macos.template_release.dylib"
+macos.double.release = "./macos/libq3_world.macos.template_release.double.dylib"
+
+ios.arm64.single.debug = "./ios/libq3_world.ios.template_debug.arm64.dylib"
+ios.arm64.double.debug = "./ios/libq3_world.ios.template_debug.arm64.double.dylib"
+ios.arm64.single.release = "./ios/libq3_world.ios.template_release.arm64.dylib"
+ios.arm64.double.release = "./ios/libq3_world.ios.template_release.arm64.double.dylib"
+
+windows.x86_32.single.debug = "./windows/q3_world.windows.template_debug.x86_32.dll"
+windows.x86_32.double.debug = "./windows/q3_world.windows.template_debug.x86_32.double.dll"
+windows.x86_32.single.release = "./windows/q3_world.windows.template_release.x86_32.dll"
+windows.x86_32.double.release = "./windows/q3_world.windows.template_release.x86_32.double.dll"
+
+windows.x86_64.single.debug = "./windows/q3_world.windows.template_debug.x86_64.dll"
+windows.x86_64.double.debug = "./windows/q3_world.windows.template_debug.x86_64.double.dll"
+windows.x86_64.single.release = "./windows/q3_world.windows.template_release.x86_64.dll"
+windows.x86_64.double.release = "./windows/q3_world.windows.template_release.x86_64.double.dll"
+
+linux.x86_64.single.debug = "./linux/libq3_world.linux.template_debug.x86_64.so"
+linux.x86_64.double.debug = "./linux/libq3_world.linux.template_debug.x86_64.double.so"
+linux.x86_64.single.release = "./linux/libq3_world.linux.template_release.x86_64.so"
+linux.x86_64.double.release = "./linux/libq3_world.linux.template_release.x86_64.double.so"
+
+linux.arm64.single.debug = "./linux/libq3_world.linux.template_debug.arm64.so"
+linux.arm64.double.debug = "./linux/libq3_world.linux.template_debug.arm64.double.so"
+linux.arm64.single.release = "./linux/libq3_world.linux.template_release.arm64.so"
+linux.arm64.double.release = "./linux/libq3_world.linux.template_release.arm64.double.so"
+
+linux.rv64.single.debug = "./linux/libq3_world.linux.template_debug.rv64.so"
+linux.rv64.double.debug = "./linux/libq3_world.linux.template_debug.rv64.double.so"
+linux.rv64.single.release = "./linux/libq3_world.linux.template_release.rv64.so"
+linux.rv64.double.release = "./linux/libq3_world.linux.template_release.rv64.double.so"
+
+android.x86_64.single.debug = "./android/libq3_world.android.template_debug.x86_64.so"
+android.x86_64.double.debug = "./android/libq3_world.android.template_debug.x86_64.double.so"
+android.x86_64.single.release = "./android/libq3_world.android.template_release.x86_64.so"
+android.x86_64.double.release = "./android/libq3_world.android.template_release.x86_64.double.so"
+
+android.arm64.single.debug = "./android/libq3_world.android.template_debug.arm64.so"
+android.arm64.double.debug = "./android/libq3_world.android.template_debug.arm64.double.so"
+android.arm64.single.release = "./android/libq3_world.android.template_release.arm64.so"
+android.arm64.double.release = "./android/libq3_world.android.template_release.arm64.double.so"
+
+web.wasm32.single.debug = "./web/libq3_world.web.template_debug.wasm32.nothreads.wasm"
+web.wasm32.double.debug = "./web/libq3_world.web.template_debug.wasm32.double.nothreads.wasm"
+web.wasm32.single.release = "./web/libq3_world.web.template_release.wasm32.nothreads.wasm"
+web.wasm32.double.release = "./web/libq3_world.web.template_release.wasm32.double.nothreads.wasm"
