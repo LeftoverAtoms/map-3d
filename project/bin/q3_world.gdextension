@@ -2,7 +2,7 @@
 
 entry_symbol = "q3_world_library_init"
 compatibility_minimum = "4.1"
-reloadable = false
+reloadable = true
 
 [libraries]
 ; Relative paths ensure that our GDExtension can be placed anywhere in the project directory.
