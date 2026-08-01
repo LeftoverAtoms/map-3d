@@ -7,7 +7,9 @@
 #include <godot_cpp/godot.hpp>
 
 #include "q3_bsp_format_loader.h"
+#include "q3_bsp_draw_list_effect.h"
 #include "q3_bsp_loader.h"
+#include "q3_bsp_renderer.h"
 #include "q3_bsp_resource.h"
 
 using namespace godot;
@@ -25,6 +27,8 @@ void initialize_gdextension_types(ModuleInitializationLevel p_level)
 	GDREGISTER_CLASS(Q3BspResource);
 	GDREGISTER_CLASS(Q3BspFormatLoader);
 	GDREGISTER_CLASS(Q3BspLoader);
+	GDREGISTER_CLASS(Q3BspRenderer);
+	GDREGISTER_CLASS(Q3BspDrawListEffect);
 
 	q3_bsp_format_loader.instantiate();
 	ResourceLoader::get_singleton()->add_resource_format_loader(q3_bsp_format_loader, true);

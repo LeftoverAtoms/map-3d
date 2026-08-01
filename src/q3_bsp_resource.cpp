@@ -10,6 +10,35 @@ using namespace godot;
 
 namespace
 {
+	String resolve_bsp_file_path(const String &p_path)
+	{
+		String file_path = p_path.strip_edges();
+		if ((file_path.begins_with("\"") && file_path.ends_with("\"")) ||
+				(file_path.begins_with("'") && file_path.ends_with("'"))) {
+			file_path = file_path.substr(1, file_path.length() - 2).strip_edges();
+		}
+
+		if (file_path.begins_with("res://") || file_path.begins_with("user://")) {
+			return ProjectSettings::get_singleton()->globalize_path(file_path);
+		}
+
+		const String normalized = file_path.replace("\\", "/");
+		if (normalized.begins_with("/") || normalized.begins_with("//") ||
+				(normalized.length() >= 3 && normalized[1] == ':' && normalized[2] == '/')) {
+			return file_path;
+		}
+
+		if (normalized.begins_with("project/")) {
+			return ProjectSettings::get_singleton()->globalize_path(String("res://") + normalized.substr(8));
+		}
+
+		if (normalized.begins_with("./")) {
+			return ProjectSettings::get_singleton()->globalize_path(String("res://") + normalized.substr(2));
+		}
+
+		return ProjectSettings::get_singleton()->globalize_path(String("res://") + normalized);
+	}
+
 	const char *LumpName(q3::bsp::lumpIndex_t lumpNum)
 	{
 		switch (lumpNum) {
@@ -286,10 +315,7 @@ void Q3BspResource::_bind_methods()
 bool Q3BspResource::load_from_path(const String &p_path)
 {
 	path = p_path;
-	String file_path = p_path;
-	if (file_path.begins_with("res://") || file_path.begins_with("user://")) {
-		file_path = ProjectSettings::get_singleton()->globalize_path(file_path);
-	}
+	String file_path = resolve_bsp_file_path(p_path);
 
 	std::string load_error;
 	valid = q3::bsp::load_file(file_path.utf8().get_data(), bsp, load_error);

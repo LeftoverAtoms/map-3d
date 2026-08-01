@@ -1,56 +1,69 @@
-# godot-cpp template
-This repository serves as a quickstart template for GDExtension development with Godot 4.0+.
+# q3-world
 
-## Contents
-* Preconfigured source files for C++ development of the GDExtension ([src/](./src/))
-* An empty Godot project in [project/](./project), to test the GDExtension
-* godot-cpp as a submodule (`godot-cpp/`)
-* GitHub Issues template ([.github/ISSUE_TEMPLATE.yml](./.github/ISSUE_TEMPLATE.yml))
-* GitHub CI/CD workflows to publish your library packages when creating a release ([.github/workflows/builds.yml](./.github/workflows/builds.yml))
-* An SConstruct file with various functions, such as boilerplate for [Adding documentation](https://docs.godotengine.org/en/stable/tutorials/scripting/cpp/gdextension_docs_system.html)
+Godot 4.7 GDExtension renderer for Quake 3 BSP worlds.
 
-## Usage - Template
+## Build
 
-To use this template, log in to GitHub and click the green "Use this template" button at the top of the repository page. This will let you create a copy of this repository with a clean git history.
+Use SCons:
 
-To get started with your new GDExtension, do the following:
-
-* clone your repository to your local computer
-* initialize the godot-cpp git submodule via `git submodule update --init`
-* change the name of the compiled library file inside the [SConstruct](./SConstruct) file by modifying the `libname` string.
-  * change the paths of the to be loaded library name inside the [project/bin/example.gdextension](./project/bin/example.gdextension) file, by replacing `EXTENSION-NAME` with the name you chose for `libname`.
-* change the `entry_symbol` string inside [project/bin/example.gdextension](./project/bin/example.gdextension) file.
-  * rename the `example_library_init` function in [src/register_types.cpp](./src/register_types.cpp) to the same name you chose for `entry_symbol`.
-* change the name of the `project/bin/example.gdextension` file
-
-Now, you can build the project with the following command:
-
-```shell
-scons
+```powershell
+scons target=template_debug
 ```
 
-If the build command worked, you can test it with the [project](./project) project. Import it into Godot, open it, and launch the main scene. You should see it print the following line in the console:
+The debug build installs the extension DLL into `project/bin/windows/`.
 
+## Renderer Demo
+
+Open `project/renderer_demo.tscn` in Godot.
+
+The scene uses:
+
+- `Q3WorldEnvironment` with a `Compositor`
+- `Q3BspDrawListEffect` for RenderingDevice draw-list rendering
+- A plain `Camera3D` named `DrawListCamera`
+
+The BSP is rendered by `RenderingDevice`; the demo must not use `MeshInstance3D` for BSP rendering.
+
+## Selecting Maps
+
+Select the `RendererDemo` node and set `bsp_path`.
+
+The path supports:
+
+- Godot project paths, such as `res://maps/mptourney1.bsp`
+- project-relative paths, such as `maps/mptourney1.bsp` or `project/maps/mptourney1.bsp`
+- absolute/global paths, such as `D:/DEV/q3-world/project/maps/mpq3ctf1.bsp`
+- quoted pasted paths, such as `"D:/DEV/q3-world/project/maps/mpq3ctf1.bsp"`
+
+The overlay shows the active BSP file and renderer stats. If a map fails to load, `Q3BspDrawListEffect.load_error` reports the native BSP loader error.
+
+## Debug Rendering
+
+`Q3BspDrawListEffect.debug_draw_mode` supports:
+
+- `0` Shaded
+- `1` Wireframe
+- `2` Base Texture
+- `3` Lightmap
+- `4` Vertex Color
+- `5` Unshaded
+
+In the editor, `renderer_demo.gd` mirrors the Perspective viewport debug mode into the BSP renderer where possible. In particular, `Perspective > Display Debug > Wireframe` maps to `debug_draw_mode = 1`, which rebuilds the RD raster pipeline with wireframe enabled.
+
+## Verification
+
+Run the strict renderer verifier:
+
+```powershell
+D:\DEV\Godot_4.7\Godot_v4.7-stable_win64_console.exe --path project --script res://verify_renderer_demo.gd
 ```
-Type: 24
+
+Run the all-maps smoke verifier:
+
+```powershell
+D:\DEV\Godot_4.7\Godot_v4.7-stable_win64_console.exe --path project --script res://verify_all_maps_renderer.gd
 ```
 
-### Configuring an IDE
-You can develop your own extension with any text editor and by invoking scons on the command line, but if you want to work with an IDE (Integrated Development Environment), you can use a compilation database file called `compile_commands.json`. Most IDEs should automatically identify this file, and self-configure appropriately.
-To generate the database file, you can run one of the following commands in the project root directory:
-```shell
-# Generate compile_commands.json while compiling
-scons compiledb=yes
+`verify_renderer_demo.gd` checks renderer wiring, no `MeshInstance3D` nodes, RD draw-list execution, texture/lightmap/material setup, culling behavior, BSP path switching, missing-path error reporting, debug modes, and viewport wireframe mirroring.
 
-# Generate compile_commands.json without compiling
-scons compiledb=yes compile_commands.json
-```
-
-## Usage - Actions
-
-This repository comes with continuous integration (CI) through a GitHub action that tests building the GDExtension.
-It triggers automatically for each pushed change. You can find and edit it in [builds.yml](.github/workflows/ci.yml).
-
-There is also a workflow ([make_build.yml](.github/workflows/make_build.yml)) that builds the GDExtension for all supported platforms that you can use to create releases.
-You can trigger this workflow manually from the `Actions` tab on GitHub.
-After it is complete, you can find the file `godot-cpp-template.zip` in the `Artifacts` section of the workflow run.
+`verify_all_maps_renderer.gd` loads every `.bsp` in `project/maps` through the RD renderer with culling disabled and fails if any map cannot upload geometry, submit visible surfaces, or create material sets.
