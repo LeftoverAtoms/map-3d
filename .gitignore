@@ -4,6 +4,7 @@
 
 # Ignore library files but not the gdextension file
 /bin/**
+/project/bin/**
 !project/bin/*.gdextension
 
 # Ignore scons database

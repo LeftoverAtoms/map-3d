@@ -87,7 +87,7 @@ namespace godot
 		int64_t framebuffer_format = -1;
 		int64_t vertex_format = -1;
 		bool pipeline_wireframe = false;
-		q3::bsp::BspData bsp_data;
+		q3::bsp::world_t *world = nullptr;
 		bool bsp_loaded = false;
 		bool shader_scripts_loaded = false;
 		int num_clusters = 0;

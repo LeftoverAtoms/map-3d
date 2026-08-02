@@ -39,8 +39,6 @@ env = SConscript("godot-cpp/SConstruct", {"env": env, "customs": customs})
 
 env.Append(CPPPATH=["src/"])
 sources = Glob("src/*.cpp")
-tool_sources = ["src/bsp_smoke_test.cpp"]
-sources = [source for source in sources if str(source).replace("\\", "/") not in tool_sources]
 
 if env["target"] in ["editor", "template_debug"]:
     try:
@@ -61,7 +59,6 @@ library = env.SharedLibrary(
 )
 
 copy = env.Install("{}/bin/{}/".format(projectdir, env["platform"]), library)
-smoke_test = env.Program("bin/{}/bsp_smoke_test".format(env["platform"]), ["src/bsp_smoke_test.cpp", "src/bsp_loader.cpp"])
 
-default_args = [library, copy, smoke_test]
+default_args = [library, copy]
 Default(*default_args)

@@ -45,7 +45,7 @@ namespace
 {
 	inline constexpr int PATCH_SUBDIVISIONS = 8;
 	inline constexpr int LIGHTMAP_SIZE = 128;
-	inline constexpr int LIGHTMAP_BYTES = LIGHTMAP_SIZE * LIGHTMAP_SIZE * 3;
+	inline constexpr int LIGHTMAP_BYTES = LIGHTMAP_SIZE * LIGHTMAP_SIZE * 4;
 	inline constexpr int VERTEX_STRIDE = 11 * 4;
 	inline constexpr std::int32_t SURF_NODRAW = 0x80;
 
@@ -171,12 +171,27 @@ namespace
 		return image;
 	}
 
-	bool shader_is_nodraw(const q3::bsp::BspData &p_bsp, int p_shader_num)
+	bool shader_is_nodraw(const q3::bsp::world_t *p_world, int p_shader_num)
 	{
-		if (p_shader_num < 0 || static_cast<std::size_t>(p_shader_num) >= p_bsp.shaders.size()) {
+		if (p_world == nullptr || p_shader_num < 0 || p_shader_num >= p_world->numShaders) {
 			return false;
 		}
-		return (p_bsp.shaders[static_cast<std::size_t>(p_shader_num)].surfaceFlags & SURF_NODRAW) != 0;
+		return (p_world->shaders[static_cast<std::size_t>(p_shader_num)].surfaceFlags & SURF_NODRAW) != 0;
+	}
+
+	q3::bsp::drawVert_t draw_vert_from_face_point(const q3::bsp::srfSurfaceFace_t &p_face, std::size_t p_point)
+	{
+		q3::bsp::drawVert_t out {};
+		const std::size_t base = p_point * 8;
+		out.xyz[0] = p_face.points[base + 0];
+		out.xyz[1] = p_face.points[base + 1];
+		out.xyz[2] = p_face.points[base + 2];
+		out.st[0] = p_face.points[base + 3];
+		out.st[1] = p_face.points[base + 4];
+		out.lightmap[0] = p_face.points[base + 5];
+		out.lightmap[1] = p_face.points[base + 6];
+		std::memcpy(out.color, &p_face.points[base + 7], sizeof(out.color));
+		return out;
 	}
 
 	void write_vertex(PackedByteArray &r_data, int p_index, const q3::bsp::drawVert_t &p_vertex)
@@ -376,84 +391,77 @@ namespace
 		return frustum;
 	}
 
-	std::int32_t read_i32(const std::vector<std::uint8_t> &p_bytes, std::size_t p_offset)
-	{
-		std::int32_t out = 0;
-		if (p_offset + sizeof(out) <= p_bytes.size()) {
-			std::memcpy(&out, p_bytes.data() + p_offset, sizeof(out));
-		}
-		return out;
-	}
-
-	bool cluster_visible(const q3::bsp::BspData &p_bsp, int p_num_clusters, int p_cluster_bytes, int p_view_cluster, int p_test_cluster)
+	bool cluster_visible(const q3::bsp::world_t *p_world, int p_view_cluster, int p_test_cluster)
 	{
 		if (p_test_cluster < 0) {
 			return false;
 		}
-		if (p_bsp.visibility.size() < 8 || p_num_clusters <= 0 || p_cluster_bytes <= 0) {
+		if (p_world == nullptr || p_world->vis == nullptr || p_world->numClusters <= 0 || p_world->clusterBytes <= 0) {
 			return true;
 		}
-		if (p_view_cluster < 0 || p_view_cluster >= p_num_clusters || p_test_cluster >= p_num_clusters) {
+		if (p_view_cluster < 0 || p_view_cluster >= p_world->numClusters || p_test_cluster >= p_world->numClusters) {
 			return true;
 		}
-		const std::size_t offset = 8 + static_cast<std::size_t>(p_view_cluster) * static_cast<std::size_t>(p_cluster_bytes) + static_cast<std::size_t>(p_test_cluster >> 3);
-		if (offset >= p_bsp.visibility.size()) {
-			return true;
-		}
-		return (p_bsp.visibility[offset] & (1 << (p_test_cluster & 7))) != 0;
+		const std::size_t offset = static_cast<std::size_t>(p_view_cluster) * static_cast<std::size_t>(p_world->clusterBytes) + static_cast<std::size_t>(p_test_cluster >> 3);
+		return (static_cast<std::uint8_t>(p_world->vis[offset]) & (1 << (p_test_cluster & 7))) != 0;
 	}
 
-	int point_leafnum(const q3::bsp::BspData &p_bsp, const Vector3 &p_q3_point)
+	int point_leafnum(const q3::bsp::world_t *p_world, const Vector3 &p_q3_point)
 	{
-		int node_num = 0;
-		while (node_num >= 0) {
-			if (static_cast<std::size_t>(node_num) >= p_bsp.nodes.size()) {
+		if (p_world == nullptr || p_world->nodes == nullptr || p_world->numnodes <= 0) {
+			return -1;
+		}
+
+		q3::bsp::mnode_t *node = p_world->nodes.get();
+		while (node->contents == q3::bsp::CONTENTS_NODE) {
+			if (node->plane == nullptr) {
 				return -1;
 			}
-			const q3::bsp::dnode_t &node = p_bsp.nodes[static_cast<std::size_t>(node_num)];
-			if (node.planeNum < 0 || static_cast<std::size_t>(node.planeNum) >= p_bsp.planes.size()) {
-				return -1;
-			}
-			const q3::bsp::dplane_t &plane = p_bsp.planes[static_cast<std::size_t>(node.planeNum)];
+			const q3::bsp::cplane_t &plane = *node->plane;
 			const float distance =
 					p_q3_point.x * plane.normal[0] +
 					p_q3_point.y * plane.normal[1] +
 					p_q3_point.z * plane.normal[2] -
 					plane.dist;
-			node_num = node.children[distance >= 0.0f ? 0 : 1];
+			node = node->children[distance >= 0.0f ? 0 : 1];
+			if (node == nullptr) {
+				return -1;
+			}
 		}
 
-		const int leaf_num = -1 - node_num;
-		if (leaf_num < 0 || static_cast<std::size_t>(leaf_num) >= p_bsp.leafs.size()) {
+		const auto leaf_num = static_cast<int>(node - (p_world->nodes.get() + p_world->numDecisionNodes));
+		if (leaf_num < 0 || p_world->numDecisionNodes + leaf_num >= p_world->numnodes) {
 			return -1;
 		}
 		return leaf_num;
 	}
 
 	std::vector<std::uint8_t> mark_pvs_surfaces(
-			const q3::bsp::BspData &p_bsp,
-			int p_num_clusters,
-			int p_cluster_bytes,
+			const q3::bsp::world_t *p_world,
 			int p_view_cluster,
 			int &r_marked_surface_count)
 	{
-		std::vector<std::uint8_t> surface_visible(p_bsp.surfaces.size(), 0);
+		const int surface_count = p_world ? p_world->numsurfaces : 0;
+		std::vector<std::uint8_t> surface_visible(static_cast<std::size_t>(std::max(surface_count, 0)), 0);
 		r_marked_surface_count = 0;
-		for (const q3::bsp::dleaf_t &leaf : p_bsp.leafs) {
-			if (!cluster_visible(p_bsp, p_num_clusters, p_cluster_bytes, p_view_cluster, leaf.cluster)) {
+		if (p_world == nullptr || p_world->nodes == nullptr || p_world->surfaces == nullptr) {
+			return surface_visible;
+		}
+		for (int i = p_world->numDecisionNodes; i < p_world->numnodes; ++i) {
+			const q3::bsp::mnode_t &leaf = p_world->nodes[static_cast<std::size_t>(i)];
+			if (!cluster_visible(p_world, p_view_cluster, leaf.cluster)) {
 				continue;
 			}
-			if (leaf.firstLeafSurface < 0 || leaf.numLeafSurfaces < 0) {
+			if (leaf.firstmarksurface == nullptr || leaf.nummarksurfaces < 0) {
 				continue;
 			}
-			const std::size_t first = static_cast<std::size_t>(leaf.firstLeafSurface);
-			const std::size_t count = static_cast<std::size_t>(leaf.numLeafSurfaces);
-			if (first > p_bsp.leafsurfaces.size() || count > p_bsp.leafsurfaces.size() - first) {
-				continue;
-			}
-			for (std::size_t i = 0; i < count; ++i) {
-				const int surface_index = p_bsp.leafsurfaces[first + i];
-				if (surface_index < 0 || static_cast<std::size_t>(surface_index) >= surface_visible.size()) {
+			for (int mark = 0; mark < leaf.nummarksurfaces; ++mark) {
+				q3::bsp::msurface_t *surface = leaf.firstmarksurface[mark];
+				if (surface == nullptr) {
+					continue;
+				}
+				const auto surface_index = static_cast<int>(surface - p_world->surfaces.get());
+				if (surface_index < 0 || surface_index >= p_world->numsurfaces) {
 					continue;
 				}
 				std::uint8_t &visible = surface_visible[static_cast<std::size_t>(surface_index)];
@@ -729,19 +737,26 @@ bool Q3BspDrawListEffect::upload_lightmaps(RenderingDevice *p_rd)
 	}
 	base_texture_count = 1;
 
-	const std::size_t count = bsp_data.lightmaps.size() / LIGHTMAP_BYTES;
+	if (world == nullptr) {
+		lightmap_count = 0;
+		return true;
+	}
+
+	const std::size_t count = static_cast<std::size_t>(world->numLightmaps);
 	lightmaps.resize(count);
 	for (std::size_t lightmap_index = 0; lightmap_index < count; ++lightmap_index) {
 		PackedByteArray rgba;
 		rgba.resize(LIGHTMAP_SIZE * LIGHTMAP_SIZE * 4);
 		const std::size_t src_base = lightmap_index * LIGHTMAP_BYTES;
 		for (int pixel = 0; pixel < LIGHTMAP_SIZE * LIGHTMAP_SIZE; ++pixel) {
-			const std::size_t src = src_base + static_cast<std::size_t>(pixel) * 3;
+			const std::size_t src = src_base + static_cast<std::size_t>(pixel) * 4;
 			const int64_t dst = static_cast<int64_t>(pixel) * 4;
-			rgba.encode_u8(dst + 0, static_cast<uint8_t>(std::min<int>(static_cast<int>(bsp_data.lightmaps[src + 0]) * 2, 255)));
-			rgba.encode_u8(dst + 1, static_cast<uint8_t>(std::min<int>(static_cast<int>(bsp_data.lightmaps[src + 1]) * 2, 255)));
-			rgba.encode_u8(dst + 2, static_cast<uint8_t>(std::min<int>(static_cast<int>(bsp_data.lightmaps[src + 2]) * 2, 255)));
-			rgba.encode_u8(dst + 3, 255);
+			if (src + 3 < world->lightmaps.size()) {
+				rgba.encode_u8(dst + 0, world->lightmaps[src + 0]);
+				rgba.encode_u8(dst + 1, world->lightmaps[src + 1]);
+				rgba.encode_u8(dst + 2, world->lightmaps[src + 2]);
+				rgba.encode_u8(dst + 3, world->lightmaps[src + 3]);
+			}
 		}
 		lightmaps[lightmap_index].lightmap_num = static_cast<int>(lightmap_index);
 		lightmaps[lightmap_index].texture = create_texture_rgba8(p_rd, LIGHTMAP_SIZE, LIGHTMAP_SIZE, rgba);
@@ -859,9 +874,9 @@ RID Q3BspDrawListEffect::get_base_texture_for_shader(RenderingDevice *p_rd, int 
 	resource.shader_num = p_shader_num;
 	resource.texture = fallback_base_texture;
 
-	if (p_shader_num >= 0 && static_cast<std::size_t>(p_shader_num) < bsp_data.shaders.size()) {
+	if (world != nullptr && p_shader_num >= 0 && p_shader_num < world->numShaders) {
 		load_shader_scripts();
-		const String shader_path = qpath_to_string(bsp_data.shaders[static_cast<std::size_t>(p_shader_num)].shader, q3::bsp::MAX_QPATH);
+		const String shader_path = qpath_to_string(world->shaders[static_cast<std::size_t>(p_shader_num)].shader, q3::bsp::MAX_QPATH);
 		const String image_path = resolve_shader_image(shader_path);
 		PackedStringArray candidates;
 		candidates.push_back(String("res://") + image_path + ".png");
@@ -965,80 +980,74 @@ bool Q3BspDrawListEffect::upload_bsp_geometry(RenderingDevice *p_rd)
 	resolved_bsp_path = file_path;
 	load_error = String();
 
-	std::string error;
-	if (!q3::bsp::load_file(file_path.utf8().get_data(), bsp_data, error)) {
+	q3::bsp::RE_LoadWorldMap(file_path.utf8().get_data());
+	world = q3::bsp::R_GetWorld();
+	if (world == nullptr) {
 		bsp_loaded = false;
-		load_error = String("Failed to load BSP '") + bsp_path + "' (" + file_path + "): " + error.c_str();
+		load_error = String("Failed loading resource: ") + bsp_path + ".";
 		return false;
 	}
 	bsp_loaded = true;
-	num_clusters = read_i32(bsp_data.visibility, 0);
-	cluster_bytes = read_i32(bsp_data.visibility, 4);
+	num_clusters = world->numClusters;
+	cluster_bytes = world->clusterBytes;
 
 	std::vector<q3::bsp::drawVert_t> vertices;
 	std::vector<std::uint32_t> indices;
 	std::vector<DrawSurface> surface_ranges;
-	for (std::size_t bsp_surface_index = 0; bsp_surface_index < bsp_data.surfaces.size(); ++bsp_surface_index) {
-		const q3::bsp::dsurface_t &surface = bsp_data.surfaces[bsp_surface_index];
-		if (shader_is_nodraw(bsp_data, surface.shaderNum)) {
-			continue;
-		}
-		if (surface.firstVert < 0 || surface.numVerts < 0 || surface.firstIndex < 0 || surface.numIndexes < 0) {
-			continue;
-		}
-		const std::size_t first_vert = static_cast<std::size_t>(surface.firstVert);
-		const std::size_t num_verts = static_cast<std::size_t>(surface.numVerts);
-		const std::size_t first_index = static_cast<std::size_t>(surface.firstIndex);
-		const std::size_t num_indexes = static_cast<std::size_t>(surface.numIndexes);
-		if (first_vert > bsp_data.drawVerts.size() || num_verts > bsp_data.drawVerts.size() - first_vert ||
-				first_index > bsp_data.drawIndexes.size() || num_indexes > bsp_data.drawIndexes.size() - first_index) {
+	for (std::int32_t bsp_surface_index = 0; bsp_surface_index < world->numsurfaces; ++bsp_surface_index) {
+		const q3::bsp::msurface_t &surface = world->surfaces[static_cast<std::size_t>(bsp_surface_index)];
+		const int shader_num = surface.shader ? surface.shader->shaderNum : -1;
+		const int lightmap_num = surface.shader ? surface.shader->lightmapNum : q3::bsp::LIGHTMAP_NONE;
+		if (shader_is_nodraw(world, shader_num) || !surface.data) {
 			continue;
 		}
 
 		const std::size_t surface_first_vertex = vertices.size();
 		const std::uint32_t surface_first_index = static_cast<std::uint32_t>(indices.size());
 
-		if (surface.surfaceType == q3::bsp::MST_PATCH) {
-			if (surface.patchWidth < 3 ||
-					surface.patchHeight < 3 ||
-					(surface.patchWidth & 1) == 0 ||
-					(surface.patchHeight & 1) == 0 ||
-					surface.patchWidth * surface.patchHeight > surface.numVerts) {
-				continue;
+		if (auto face = std::dynamic_pointer_cast<q3::bsp::srfSurfaceFace_t>(surface.data)) {
+			const std::uint32_t base = static_cast<std::uint32_t>(vertices.size());
+			for (std::int32_t i = 0; i < face->numPoints; ++i) {
+				vertices.push_back(draw_vert_from_face_point(*face, static_cast<std::size_t>(i)));
 			}
-			const srfGridMesh_t grid = subdivide_patch_to_grid(surface.patchWidth, surface.patchHeight, bsp_data.drawVerts.data() + first_vert);
-			append_patch_grid(grid, vertices, indices);
-			DrawSurface draw_surface;
-			draw_surface.source_surface = static_cast<int>(bsp_surface_index);
-			draw_surface.shader_num = surface.shaderNum;
-			draw_surface.lightmap_num = surface.lightmapNum;
-			draw_surface.first_index = surface_first_index;
-			draw_surface.index_count = static_cast<std::uint32_t>(indices.size()) - surface_first_index;
-			draw_surface.bounds = make_bounds(vertices, surface_first_vertex, vertices.size() - surface_first_vertex);
-			if (draw_surface.index_count > 0) {
-				surface_ranges.push_back(draw_surface);
+			for (std::int32_t index : face->indices) {
+				if (index >= 0 && index < face->numPoints) {
+					indices.push_back(base + static_cast<std::uint32_t>(index));
+				}
 			}
+		} else if (auto grid = std::dynamic_pointer_cast<q3::bsp::srfGridMesh_t>(surface.data)) {
+			const std::uint32_t base = static_cast<std::uint32_t>(vertices.size());
+			vertices.insert(vertices.end(), grid->verts.begin(), grid->verts.end());
+			for (std::int32_t y = 0; y < grid->height - 1; ++y) {
+				for (std::int32_t x = 0; x < grid->width - 1; ++x) {
+					const std::uint32_t i0 = base + static_cast<std::uint32_t>(y * grid->width + x);
+					const std::uint32_t i1 = i0 + 1;
+					const std::uint32_t i2 = base + static_cast<std::uint32_t>((y + 1) * grid->width + x);
+					const std::uint32_t i3 = i2 + 1;
+					indices.push_back(i0);
+					indices.push_back(i2);
+					indices.push_back(i1);
+					indices.push_back(i1);
+					indices.push_back(i2);
+					indices.push_back(i3);
+				}
+			}
+		} else if (auto tri = std::dynamic_pointer_cast<q3::bsp::srfTriangles_t>(surface.data)) {
+			const std::uint32_t base = static_cast<std::uint32_t>(vertices.size());
+			vertices.insert(vertices.end(), tri->verts.begin(), tri->verts.end());
+			for (std::int32_t index : tri->indexes) {
+				if (index >= 0 && index < tri->numVerts) {
+					indices.push_back(base + static_cast<std::uint32_t>(index));
+				}
+			}
+		} else {
 			continue;
 		}
 
-		if (surface.surfaceType != q3::bsp::MST_PLANAR && surface.surfaceType != q3::bsp::MST_TRIANGLE_SOUP) {
-			continue;
-		}
-
-		const std::uint32_t base = static_cast<std::uint32_t>(vertices.size());
-		for (std::size_t i = 0; i < num_verts; ++i) {
-			vertices.push_back(bsp_data.drawVerts[first_vert + i]);
-		}
-		for (std::size_t i = 0; i < num_indexes; ++i) {
-			const std::int32_t index = bsp_data.drawIndexes[first_index + i];
-			if (index >= 0 && static_cast<std::size_t>(index) < num_verts) {
-				indices.push_back(base + static_cast<std::uint32_t>(index));
-			}
-		}
 		DrawSurface draw_surface;
-		draw_surface.source_surface = static_cast<int>(bsp_surface_index);
-		draw_surface.shader_num = surface.shaderNum;
-		draw_surface.lightmap_num = surface.lightmapNum;
+		draw_surface.source_surface = bsp_surface_index;
+		draw_surface.shader_num = shader_num;
+		draw_surface.lightmap_num = lightmap_num;
 		draw_surface.first_index = surface_first_index;
 		draw_surface.index_count = static_cast<std::uint32_t>(indices.size()) - surface_first_index;
 		draw_surface.bounds = make_bounds(vertices, surface_first_vertex, vertices.size() - surface_first_vertex);
@@ -1324,10 +1333,10 @@ void Q3BspDrawListEffect::_render_callback(int32_t p_effect_callback_type, Rende
 		const Projection view_projection = scene_data->get_cam_projection() * Projection(scene_data->get_cam_transform().affine_inverse());
 		const PackedByteArray push_constant = pack_draw_push_constants(view_projection, debug_draw_mode);
 		const ViewFrustum frustum = get_view_frustum(scene_data);
-		const int leaf_num = bsp_loaded ? point_leafnum(bsp_data, godot_to_q3_position(scene_data->get_cam_transform().origin)) : -1;
-		view_cluster = (leaf_num >= 0) ? bsp_data.leafs[static_cast<std::size_t>(leaf_num)].cluster : -1;
+		const int leaf_num = bsp_loaded ? point_leafnum(world, godot_to_q3_position(scene_data->get_cam_transform().origin)) : -1;
+		view_cluster = (world != nullptr && leaf_num >= 0) ? world->nodes[static_cast<std::size_t>(world->numDecisionNodes + leaf_num)].cluster : -1;
 		int marked_surface_count = 0;
-		const std::vector<std::uint8_t> pvs_surfaces = mark_pvs_surfaces(bsp_data, num_clusters, cluster_bytes, view_cluster, marked_surface_count);
+		const std::vector<std::uint8_t> pvs_surfaces = mark_pvs_surfaces(world, view_cluster, marked_surface_count);
 		pvs_surface_count = enable_pvs_culling ? marked_surface_count : static_cast<int>(draw_surfaces.size());
 		visible_surface_count = 0;
 		pvs_rejected_surface_count = 0;
