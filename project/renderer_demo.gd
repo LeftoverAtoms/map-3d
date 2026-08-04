@@ -1,18 +1,9 @@
 @tool
-extends Node
+extends Map3D
 
-@export_global_file("*.bsp")
-var bsp_path: String:
-	set(value):
-		if bsp_path == value:
-			return
+@export_tool_button("Load Map") var my_button: Callable = _load_map
 
-		bsp_path = value
-
-		if is_inside_tree():
-			_load_map()
-
-@export var draw_list_effect: Q3BspDrawListEffect
+@export var mesh_instance: MeshInstance3D
 
 
 func _ready() -> void:
@@ -20,11 +11,9 @@ func _ready() -> void:
 
 
 func _load_map() -> void:
-	if draw_list_effect == null:
-		push_error("Q3BspDrawListEffect is not assigned.")
+	if map_path.is_empty():
 		return
 
-	if bsp_path.is_empty():
-		return
+	load_map()
 
-	draw_list_effect.load_bsp(bsp_path)
+	mesh_instance.mesh = get_visual_mesh()

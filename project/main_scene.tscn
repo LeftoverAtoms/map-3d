@@ -2,20 +2,9 @@
 
 [ext_resource type="Script" uid="uid://bu2wdvrnnnv5h" path="res://renderer_demo.gd" id="1_0f027"]
 
-[sub_resource type="Environment" id="Environment_v7kd6"]
-
-[sub_resource type="CameraAttributesPhysical" id="CameraAttributesPhysical_qpway"]
-
-[sub_resource type="Q3BspDrawListEffect" id="Q3BspDrawListEffect_v7kd6"]
-bsp_path = "D:/DEV/q3-world/project/maps/mpq3ctf2.bsp"
-
-[sub_resource type="Compositor" id="Compositor_slrym"]
-compositor_effects = Array[CompositorEffect]([SubResource("Q3BspDrawListEffect_v7kd6")])
-
-[node name="WorldEnvironment" type="WorldEnvironment" unique_id=334961573]
-environment = SubResource("Environment_v7kd6")
-camera_attributes = SubResource("CameraAttributesPhysical_qpway")
-compositor = SubResource("Compositor_slrym")
+[node name="Map3D" type="Map3D" unique_id=1658468650 node_paths=PackedStringArray("mesh_instance")]
+map_path = "maps\\q3tourney1.bsp"
 script = ExtResource("1_0f027")
-bsp_path = "D:/DEV/q3-world/project/maps/mpq3ctf2.bsp"
-draw_list_effect = SubResource("Q3BspDrawListEffect_v7kd6")
+mesh_instance = NodePath("MeshInstance3D")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="." unique_id=240218362]

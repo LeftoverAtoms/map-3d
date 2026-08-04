@@ -2,23 +2,27 @@
 
 #include <gdextension_interface.h>
 #include <godot_cpp/core/class_db.hpp>
-#include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
 
-#include "q3_bsp_draw_list_effect.h"
+#include <map_3d.hpp>
+//#include <q3/world_compositor.hpp>
 
 using namespace godot;
 
 void initialize_gdextension_types(ModuleInitializationLevel p_level)
 {
-	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
+	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE)
+	{
 		return;
 	}
-	GDREGISTER_CLASS(Q3BspDrawListEffect);
+	GDREGISTER_CLASS(rngo::Map3D);
+	//GDREGISTER_CLASS(rngo::q3::WorldCompositor);
 }
 
-void uninitialize_gdextension_types(ModuleInitializationLevel p_level) {
-	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
+void uninitialize_gdextension_types(ModuleInitializationLevel p_level)
+{
+	if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE)
+	{
 		return;
 	}
 }
