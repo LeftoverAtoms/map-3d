@@ -1,0 +1,21 @@
+Import("env", "doc_data")
+
+src_env = env.Clone()
+
+src_env.AppendUnique(CXXFLAGS=["/std:c++latest", "/Zc:__cplusplus"])
+src_env.AppendUnique(CPPPATH=["#src"])
+
+sources = [
+    # Source root.
+    Glob("*.cpp"),
+
+    # Quake 3 root.
+    Glob("q3/*.cpp"),
+    Glob("q3/*/*.cpp"),
+]
+
+sources.extend(doc_data)
+
+objects = src_env.SharedObject(sources)
+
+Return("objects")
